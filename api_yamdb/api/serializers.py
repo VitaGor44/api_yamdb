@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from reviews.models import (Category, Comment, Genre, Review,
-                            Title, User, UserRole)
+                            Title, User)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -85,17 +85,8 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.RegexField(regex=r'^[\w.@+-]+\Z', max_length=150)
-    first_name = serializers.CharField(max_length=150, required=False)
-    last_name = serializers.CharField(max_length=150, required=False)
-    email = serializers.CharField(max_length=254)
-    role = serializers.ChoiceField(
-        choices=UserRole.get_all_roles(),
-        default=UserRole.USER.value,
-        required=False
-    )
-
     class Meta:
+        model = User
         fields = (
             'username',
             'first_name',
@@ -104,40 +95,18 @@ class UserSerializer(serializers.ModelSerializer):
             'role',
             'email'
         )
-        model = User
-
-    def validate_username(self, username):
-        if username == 'me':
-            raise serializers.ValidationError(
-                'Недопустимое имя пользователя!'
-            )
-        duplicated_username = User.objects.filter(
-            username=username
-        ).exists()
-        if duplicated_username:
-            raise serializers.ValidationError(
-                'Пользователь с таким именем уже зарегистрирован'
-            )
-        return username
-
-    def validate_email(self, email):
-        duplicated_email = User.objects.filter(email=email).exists()
-        if duplicated_email:
-            raise serializers.ValidationError(
-                'Пользователь с таким email уже зарегистрирован'
-            )
-        return email
 
 
 class GetCodeSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254, required=True)
-    username = serializers.RegexField(regex=r'^[\w.@+-]+\Z', max_length=150)
+    username = serializers.RegexField(regex=r'^[\w.@+-]+$', max_length=150, required=True)
 
-    def validate_username(self, username):
-        return UserSerializer.validate_username(self, username)
-
-    def validate_email(self, email):
-        return UserSerializer.validate_email(self, email)
+    def validate_username(self, value):
+        if value == "me":
+            raise serializers.ValidationError(
+                'Невозможно использовать имя "me" для регистрации.'
+            )
+        return value
 
 
 class GetTokenSerializer(serializers.Serializer):

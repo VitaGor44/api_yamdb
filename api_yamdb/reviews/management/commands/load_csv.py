@@ -18,7 +18,6 @@ MODELS_FILES = {
 }
 
 
-# TODO: Разобраться с импортом csv-файлов в базу данных
 class Command(BaseCommand):
     def handle(self, *args, **options):
         for model, file in MODELS_FILES.items():
