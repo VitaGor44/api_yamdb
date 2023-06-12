@@ -1,4 +1,3 @@
-from secrets import token_hex
 from sqlite3 import IntegrityError
 
 from django.contrib.auth.tokens import default_token_generator
@@ -11,7 +10,6 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import (Category, Genre, Review,
                             Title, User, UserRole)
@@ -23,7 +21,7 @@ from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, GetCodeSerializer,
                           GetTokenSerializer, ReviewSerializer,
                           TitleCUDSerializer, TitleSerializer,
-                          UserSerializer) #, SignUpSerializer)
+                          UserSerializer)
 
 
 class CategoryViewSet(CreateListDestroyMixinSet):
