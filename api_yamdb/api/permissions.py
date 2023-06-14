@@ -3,7 +3,7 @@ from rest_framework import permissions
 from reviews.models import UserRole
 
 
-class IsAdmin(permissions.BasePermission):
+class IsAdminOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.user.is_authenticated:
             is_admin = request.user.role == UserRole.ADMIN.value
@@ -22,7 +22,7 @@ class IsAdminModerator(permissions.BasePermission):
                 or obj.author == request.user)
 
 
-class IsAnon(permissions.BasePermission):
+class IsAnonymous(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return not request.user.is_authenticated

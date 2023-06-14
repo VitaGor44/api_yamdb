@@ -1,11 +1,18 @@
-from datetime import datetime
-from enum import Enum
-
-from django.contrib.auth.base_user import BaseUserManager
-from django.contrib.auth.models import AbstractUser
 from django.core.validators import (MaxValueValidator, MinValueValidator,
                                     RegexValidator)
 from django.db import models
+from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.models import AbstractUser
+
+from datetime import datetime
+from enum import Enum
+
+
+ROLES = (
+    ('user', 'USER'),
+    ('moderator', 'MODERATOR'),
+    ('admin', 'ADMIN'),
+)
 
 
 class CustomUserManager(BaseUserManager):
@@ -28,9 +35,9 @@ class CustomUserManager(BaseUserManager):
 
 
 class UserRole(Enum):
-    USER = 'user'
-    MODERATOR = 'moderator'
     ADMIN = 'admin'
+    MODERATOR = 'moderator'
+    USER = 'user'
 
     @staticmethod
     def get_max_length():
@@ -43,6 +50,10 @@ class UserRole(Enum):
 
 
 class User(AbstractUser):
+    ADMIN = 'admin'
+    MODERATOR = 'moderator'
+    USER = 'user'
+
     USERNAME_VALIDATOR = RegexValidator(r'^[\w.@+-]+\Z')
     bio = models.TextField(
         'Дополнительная информация',
@@ -53,7 +64,6 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, max_length=254)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
-    password = models.CharField(blank=True, max_length=124)
     confirmation_code = models.CharField(max_length=120, default='000000')
     role = models.CharField(
         max_length=UserRole.get_max_length(),
@@ -61,6 +71,14 @@ class User(AbstractUser):
         default=UserRole.USER.value
     )
     objects = CustomUserManager()
+
+    @property
+    def is_admin(self):
+        return self.role == self.ADMIN
+
+    @property
+    def is_moderator(self):
+        return self.role == self.MODERATOR
 
     class Meta:
         ordering = ['username']

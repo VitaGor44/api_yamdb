@@ -16,7 +16,7 @@ from reviews.models import (Category, Genre, Review,
 
 from .filters import TitleFilter
 from .mixins import CreateListDestroyMixinSet
-from .permissions import IsAdmin, IsAdminModerator, IsAnon
+from .permissions import IsAdminOnly, IsAdminModerator, IsAnonymous
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, GetCodeSerializer,
                           GetTokenSerializer, ReviewSerializer,
@@ -35,7 +35,7 @@ class GenreViewSet(CreateListDestroyMixinSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAnon | IsAdmin]
+    permission_classes = [IsAnonymous | IsAdminOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_class = TitleFilter
     queryset = Title.objects.annotate(
@@ -85,7 +85,7 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ('username',)
     pagination_class = PageNumberPagination
     http_method_names = ['get', 'post', 'patch', 'delete']
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAdminOnly]
     lookup_field = 'username'
 
     @action(
