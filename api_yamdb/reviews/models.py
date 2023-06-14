@@ -126,12 +126,7 @@ class Title(models.Model):
     name = models.CharField(
         verbose_name='Название произведения', max_length=256)
     year = models.IntegerField(
-        verbose_name='Год выпуска',
-        validators=[
-            MinValueValidator(
-                0, message='Только из нашей эры!'),
-            MaxValueValidator(
-                datetime.now().year, message='Будущее временно не дочтупно')])
+        verbose_name='Год выпуска',)
     description = models.TextField(
         verbose_name='Описание', blank=True, null=True)
     genre = models.ManyToManyField(Genre, through='TitleGenre')
