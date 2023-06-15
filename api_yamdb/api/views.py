@@ -17,7 +17,8 @@ from reviews.models import (Category, Genre, Review,
 
 from .filters import TitleFilter
 from .mixins import CreateListDestroyMixinSet
-from .permissions import IsAdminOrReadOnly, IsAdminModeratorAuthorOrReadOnly, IsAnonymous
+from .permissions import IsAdminOrReadOnly,IsAdminModeratorAuthorOrReadOnly
+from .permissions import IsAnonymous
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, GetCodeSerializer,
                           GetTokenSerializer, ReviewSerializer,

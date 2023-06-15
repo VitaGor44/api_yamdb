@@ -16,6 +16,7 @@ ROLES = (
 MAX_LENGTH = 256
 MAX_LENGTH_NAME = 150
 
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **kwargs):
         user = self.model(email=email, **kwargs)
@@ -234,6 +235,7 @@ class Review(models.Model):
                 name='unique_review'
             )
         ]
+
     def __str__(self):
         return self.name
 
