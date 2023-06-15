@@ -1,3 +1,4 @@
+from smtplib import SMTPResponseException
 from sqlite3 import IntegrityError
 
 from django.contrib.auth.tokens import default_token_generator
@@ -16,7 +17,7 @@ from reviews.models import (Category, Genre, Review,
 
 from .filters import TitleFilter
 from .mixins import CreateListDestroyMixinSet
-from .permissions import IsAdminOnly, IsAdminModerator, IsAnonymous
+from .permissions import IsAdminOrReadOnly, IsAdminModeratorAuthorOrReadOnly, IsAnonymous
 from .serializers import (CategorySerializer, CommentSerializer,
                           GenreSerializer, GetCodeSerializer,
                           GetTokenSerializer, ReviewSerializer,
@@ -35,7 +36,7 @@ class GenreViewSet(CreateListDestroyMixinSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAnonymous | IsAdminOnly]
+    permission_classes = [IsAnonymous | IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_class = TitleFilter
     queryset = Title.objects.annotate(
@@ -48,7 +49,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAdminModerator]
+    permission_classes = [IsAdminModeratorAuthorOrReadOnly]
     serializer_class = ReviewSerializer
 
     def perform_create(self, serializer):
@@ -62,7 +63,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAdminModerator]
+    permission_classes = [IsAdminModeratorAuthorOrReadOnly]
     serializer_class = CommentSerializer
 
     def perform_create(self, serializer):
@@ -85,7 +86,7 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ('username',)
     pagination_class = PageNumberPagination
     http_method_names = ['get', 'post', 'patch', 'delete']
-    permission_classes = [IsAdminOnly]
+    permission_classes = [IsAdminOrReadOnly]
     lookup_field = 'username'
 
     @action(
@@ -141,6 +142,13 @@ def create_user(request):
             'Username or Email already taken',
             status=status.HTTP_400_BAD_REQUEST
         )
+    except SMTPResponseException:
+        user.delete()
+        return Response(
+            data={'error': 'Ошибка при отправки кода подтверждения!'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
     user.confirmation_code = default_token_generator.make_token(user)
     user.save()
     subject = 'Регистрация на YAMDB'
