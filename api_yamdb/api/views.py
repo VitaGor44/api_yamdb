@@ -133,6 +133,12 @@ def create_user(request):
             username=serializer.validated_data['username'],
             email=serializer.validated_data['email']
         )
+        if created is False:
+            confirmation_code = default_token_generator.make_token(user)
+            user.confirmation_code = confirmation_code
+            user.save()
+            return Response('Токен обновлен', status=status.HTTP_200_OK)
+
     except IntegrityError:
         return Response(
             'Username or Email already taken',
@@ -149,6 +155,9 @@ def create_user(request):
             data={'error': 'Ошибка при отправки кода подтверждения!'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+    # user = User.objects.get(username='user1')
+    # last_login = user.last_login
 
     user.confirmation_code = default_token_generator.make_token(user)
     user.save()
