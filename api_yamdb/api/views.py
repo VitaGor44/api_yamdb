@@ -1,9 +1,12 @@
+from datetime import timezone
 from smtplib import SMTPResponseException
 from sqlite3 import IntegrityError
 
 from django.contrib.auth.tokens import default_token_generator
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db.models import Avg
+from django.forms import models
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import api_view, permission_classes, action
@@ -133,13 +136,18 @@ def create_user(request):
             username=serializer.validated_data['username'],
             email=serializer.validated_data['email']
         )
-        if created is False:
-            confirmation_code = default_token_generator.make_token(user)
-            user.confirmation_code = confirmation_code
-            user.save()
-            return Response('Токен обновлен', status=status.HTTP_200_OK)
-
     except IntegrityError:
+        def process_request(self, request):
+            global last_login
+            if request.user.is_authenticated and request.session.session_key:
+                cache_key = f'last-seen-{request.user.id}'
+                last_login = cache.get(cache_key)
+
+            if not last_login:
+                User.objects.filter(id=request.user.id).update(last_login=timezone.now())
+                # Устанавливаем кэширование на 300 секунд с текущей датой по ключу last-seen-id-пользователя
+                cache.set(cache_key, timezone.now(), 300)
+
         return Response(
             'Username or Email already taken',
             status=status.HTTP_400_BAD_REQUEST
@@ -155,10 +163,6 @@ def create_user(request):
             data={'error': 'Ошибка при отправки кода подтверждения!'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-
-    # user = User.objects.get(username='user1')
-    # last_login = user.last_login
-
     user.confirmation_code = default_token_generator.make_token(user)
     user.save()
     subject = 'Регистрация на YAMDB'

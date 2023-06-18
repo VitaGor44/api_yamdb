@@ -1,3 +1,6 @@
+from datetime import timezone
+
+from django.core.cache import cache
 from django.core.validators import (MaxValueValidator, MinValueValidator,
                                     RegexValidator)
 from django.db import models
@@ -15,6 +18,9 @@ ROLES = (
 
 MAX_LENGTH = 256
 MAX_LENGTH_NAME = 150
+MAX_LENGTH_EMAIL = 254
+MAX_LENGTH_CONF_CODE = 120
+MAX_LENGTH_SLUG = 50
 
 
 class CustomUserManager(BaseUserManager):
@@ -74,7 +80,7 @@ class User(AbstractUser):
     )
     email = models.EmailField(
         unique=True,
-        max_length=254
+        max_length=MAX_LENGTH_EMAIL
     )
     first_name = models.CharField(
         max_length=MAX_LENGTH_NAME,
@@ -85,7 +91,7 @@ class User(AbstractUser):
         blank=True
     )
     confirmation_code = models.CharField(
-        max_length=120,
+        max_length=MAX_LENGTH_CONF_CODE,
         default='000000'
     )
     role = models.CharField(
@@ -97,15 +103,18 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return self.role == self.ADMIN
+        return self.role == 'admin' or self.is_staff or self.is_superuser
+
 
     @property
     def is_moderator(self):
         return self.role == self.MODERATOR
 
     class Meta:
-        ordering = ['username']
-        verbose_name = 'Пользователь'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['username', 'email'], name='unique_user')
+        ]
 
     def __str__(self):
         return self.username
@@ -120,7 +129,7 @@ class Category(models.Model):
         unique=True
     )
     slug = models.SlugField(
-        max_length=50,
+        max_length=MAX_LENGTH_SLUG,
         unique=True,
         validators=[SLUG_VALIDATOR])
 
@@ -141,7 +150,7 @@ class Genre(models.Model):
         unique=True
     )
     slug = models.SlugField(
-        max_length=50,
+        max_length=MAX_LENGTH_SLUG,
         unique=True,
         validators=[SLUG_VALIDATOR]
     )
