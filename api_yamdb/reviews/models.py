@@ -1,16 +1,16 @@
 from django.core.validators import (MaxValueValidator, MinValueValidator,
                                     RegexValidator)
 from django.db import models
-from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 
-from enum import Enum
-
+ADMIN = 'admin'
+MODERATOR = 'moderator'
+USER = 'user'
 
 ROLES = (
-    ('user', 'USER'),
-    ('moderator', 'MODERATOR'),
-    ('admin', 'ADMIN'),
+    (USER, 'user'),
+    (MODERATOR, 'moderator'),
+    (ADMIN, 'admin')
 )
 
 MAX_LENGTH = 256
@@ -20,51 +20,7 @@ MAX_LENGTH_CONF_CODE = 120
 MAX_LENGTH_SLUG = 50
 
 
-class CustomUserManager(BaseUserManager):
-    def create_user(self, email, password=None, **kwargs):
-        user = self.model(email=email, **kwargs)
-        user.set_password(password)
-        user.save()
-        return user
-
-    def create_superuser(self, email, password, **kwargs):
-        user = self.model(
-            email=email,
-            is_staff=True,
-            is_superuser=True,
-            **kwargs
-        )
-        user.set_password(password)
-        user.save()
-        return user
-
-    def __str__(self):
-        return self.name
-
-
-class UserRole(Enum):
-    ADMIN = 'admin'
-    MODERATOR = 'moderator'
-    USER = 'user'
-
-    @staticmethod
-    def get_max_length():
-        max_length = max(len(role.value) for role in UserRole)
-        return max_length
-
-    @staticmethod
-    def get_all_roles():
-        return tuple((r.value, r.name) for r in UserRole)
-
-    def __str__(self):
-        return self.username
-
-
 class User(AbstractUser):
-    ADMIN = 'admin'
-    MODERATOR = 'moderator'
-    USER = 'user'
-
     USERNAME_VALIDATOR = RegexValidator(r'^[\w.@+-]+\Z')
     bio = models.TextField(
         'Дополнительная информация',
@@ -92,21 +48,21 @@ class User(AbstractUser):
         default='000000'
     )
     role = models.CharField(
-        max_length=UserRole.get_max_length(),
-        choices=UserRole.get_all_roles(),
-        default=UserRole.USER.value
+        max_length=30,
+        choices=ROLES,
+        default=USER
     )
-    objects = CustomUserManager()
 
     @property
     def is_admin(self):
-        return self.role == 'admin' or self.is_staff or self.is_superuser
+        return self.role == ADMIN or self.is_staff or self.is_superuser
 
     @property
     def is_moderator(self):
-        return self.role == self.MODERATOR
+        return self.role == MODERATOR
 
     class Meta:
+        ordering = ['id']
         constraints = [
             models.UniqueConstraint(
                 fields=['username', 'email'], name='unique_user')
@@ -166,7 +122,7 @@ class Title(models.Model):
         max_length=MAX_LENGTH,
     )
     year = models.IntegerField(
-        verbose_name='Год выпуска',)
+        verbose_name='Год выпуска', )
     description = models.TextField(
         verbose_name='Описание',
         blank=True,

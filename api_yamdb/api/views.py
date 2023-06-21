@@ -1,8 +1,3 @@
-from datetime import timezone
-from smtplib import SMTPResponseException
-from sqlite3 import IntegrityError
-
-from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db.models import Avg
@@ -15,7 +10,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import (Category, Genre, Review,
-                            Title, User, UserRole)
+                            Title, User)
+from uuid import uuid4
+
 
 from .filters import TitleFilter
 from .mixins import CreateListDestroyMixinSet
@@ -91,6 +88,7 @@ class UserViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
     permission_classes = [IsAdminOrReadOnly]
     lookup_field = 'username'
+    last_login = None
 
     @action(
         methods=['get', 'patch'],
@@ -100,28 +98,15 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer_class=UserSerializer,
     )
     def me(self, request):
-        user = self.request.user
-        if request.method == 'GET':
-            serializer = self.get_serializer(user)
-            return Response(serializer.data, status.HTTP_200_OK)
-
         if request.method == 'PATCH':
-            user = get_object_or_404(User, id=user.id)
-            fixed_data = self.request.data.copy()
-            if ('role' in self.request.data
-                    and user.role == UserRole.USER.value):
-                fixed_data['role'] = UserRole.USER.value
-            serializer = self.get_serializer(
-                user,
-                data=fixed_data,
-                partial=True
+            serializer = UserSerializer(
+                request.user, data=request.data, partial=True
             )
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                data=serializer.data,
-                status=status.HTTP_200_OK
-            )
+            serializer.save(role=request.user.role)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -135,37 +120,14 @@ def create_user(request):
             username=serializer.validated_data['username'],
             email=serializer.validated_data['email']
         )
-    except IntegrityError:
-        def process_request(self, request):
-            global last_login
-            if request.user.is_authenticated and request.session.session_key:
-                cache_key = f'last-seen-{request.user.id}'
-                last_login = cache.get(cache_key)
-
-            if not last_login:
-                User.objects.filter(id=request.user.id).update(
-                    last_login=timezone.now()
-                )
-                # Устанавливаем кэширование на 5 мин с текущей датой
-                # по ключу last-seen-id-пользователя
-                cache.set(cache_key, timezone.now(), 300)
-
-        return Response(
-            'Username or Email already taken',
-            status=status.HTTP_400_BAD_REQUEST
-        )
     except Exception:
         return Response(
-            'Username or Email already taken',
+            f'Username or Email already taken!!! Choose another one!',
             status=status.HTTP_400_BAD_REQUEST
         )
-    except SMTPResponseException:
-        user.delete()
-        return Response(
-            data={'error': 'Ошибка при отправки кода подтверждения!'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
-    user.confirmation_code = default_token_generator.make_token(user)
+    if created:
+        user.is_active = False
+    user.confirmation_code = uuid4().hex
     user.save()
     subject = 'Регистрация на YAMDB'
     message = f'Код подтверждения: {user.confirmation_code}'
@@ -187,6 +149,8 @@ def get_token(request):
     user = get_object_or_404(User, username=username)
     if confirmation_code == user.confirmation_code:
         token = AccessToken.for_user(user)
+        user.is_active = True
+        user.save()
         return Response({'token': f'{token}'}, status=status.HTTP_200_OK)
     return Response({'confirmation_code': 'Неверный код подтверждения'},
                     status=status.HTTP_400_BAD_REQUEST)
