@@ -1,4 +1,3 @@
-from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
@@ -122,7 +121,7 @@ def create_user(request):
         )
     except Exception:
         return Response(
-            f'Username or Email already taken!!! Choose another one!',
+            'Username or Email already taken!!! Choose another one!',
             status=status.HTTP_400_BAD_REQUEST
         )
     if created:
